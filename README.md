@@ -1,7 +1,7 @@
 
 ---
 
-# Sr Test Engineer – Todo Challenge
+# Test Engineer – Todo Challenge
 
 **Goal:** add and test small features in a tiny Todo app. You’ll write **E2E (SpecFlow + Selenium, non-headless)** and **service tests (xUnit)**.
 
