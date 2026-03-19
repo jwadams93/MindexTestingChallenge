@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <LangVersion>latest</LangVersion>
+    <GenerateSpecFlowCodeBehindFiles>true</GenerateSpecFlowCodeBehindFiles>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="Features\**\*.feature" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- SpecFlow + xUnit -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="SpecFlow" Version="3.9.74" />
+    <PackageReference Include="SpecFlow.xUnit" Version="3.9.74" />
+    <PackageReference Include="SpecFlow.Tools.MsBuild.Generation" Version="3.9.74" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+
+    <!-- Selenium (Selenium Manager handles ChromeDriver automatically) -->
+    <PackageReference Include="Selenium.WebDriver" Version="4.24.0" />
+    <PackageReference Include="Selenium.Support" Version="4.24.0" />
+
+    <!-- Force the BoDi runtime into the output (this is the key fix) -->
+    <PackageReference Include="BoDi" Version="1.5.0" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Todos (vNext)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:860px;margin:2rem auto;padding:0 1rem}
+    h1{margin:.25rem 0 .75rem} form, .row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+    input,select,textarea{padding:.4rem .5rem} button{padding:.45rem .7rem;cursor:pointer}
+    ul{list-style:none;padding:0} li{display:grid;grid-template-columns:28px 1fr auto auto;gap:.5rem;align-items:center;padding:.35rem 0;border-bottom:1px solid #eee}
+    .badge{font-size:.75rem;padding:.1rem .4rem;border-radius:.4rem}
+    .High{background:#ffd6d6} .Medium{background:#fff3c4} .Low{background:#d6f5e8}
+    .chip{font-size:.7rem;background:#eee;border-radius:.4rem;padding:.1rem .35rem;margin-left:.35rem}
+    .toolbar{display:flex;gap:.5rem;align-items:center;margin:.75rem 0}
+    .bulk{display:flex;gap:.5rem;align-items:center;margin:.5rem 0}
+    .right{margin-left:auto}
+    .tag{background:#eef;border-radius:.4rem;padding:.1rem .35rem;margin-left:.35rem}
+  </style>
+</head>
+<body>
+  <h1>Todos</h1>
+
+  <!-- New Todo -->
+  <form id="form">
+    <input id="title" data-testid="new-title" placeholder="Title" />
+    <select id="priority" data-testid="priority">
+      <option>Medium</option><option>High</option><option>Low</option>
+    </select>
+    <input id="due" type="date" data-testid="due" />
+    <input id="tags" placeholder="tags (comma)" data-testid="tags" />
+    <textarea id="notes" placeholder="notes (optional)" rows="1" style="min-width:180px"></textarea>
+    <button id="add" data-testid="add-btn">Add</button>
+  </form>
+
+  <!-- Filters -->
+  <div class="toolbar">
+    <input id="q" placeholder="search…" />
+    <select id="status">
+      <option>All</option><option>Active</option><option>Completed</option>
+    </select>
+    <label><input type="checkbox" class="prio" value="High" checked> High</label>
+    <label><input type="checkbox" class="prio" value="Medium" checked> Medium</label>
+    <label><input type="checkbox" class="prio" value="Low" checked> Low</label>
+    <select id="sort">
+      <option value="">Sort: Title</option>
+      <option value="priority">Sort: Priority</option>
+      <option value="due">Sort: Due date</option>
+    </select>
+    <button id="apply">Apply</button>
+    <button id="clear">Clear</button>
+    <div class="right">
+      <button id="bulk-complete">Complete selected</button>
+      <button id="bulk-delete">Delete selected</button>
+    </div>
+  </div>
+
+  <!-- List -->
+  <ul id="list" data-testid="todo-list"></ul>
+
+<script>
+const list = byId('list');
+const form = byId('form');
+const titleEl = byId('title');
+const prioEl = byId('priority');
+const dueEl = byId('due');
+const tagsEl = byId('tags');
+const notesEl = byId('notes');
+const qEl = byId('q');
+const statusEl = byId('status');
+const sortEl = byId('sort');
+const applyBtn = byId('apply');
+const clearBtn = byId('clear');
+const bulkComplete = byId('bulk-complete');
+const bulkDelete = byId('bulk-delete');
+
+function byId(id){ return document.getElementById(id); }
+function qs(sel,root=document){ return root.querySelector(sel); }
+function qsa(sel,root=document){ return Array.from(root.querySelectorAll(sel)); }
+
+function buildQuery(){
+  const selected = qsa('.prio:checked').map(x=>x.value);
+  const params = new URLSearchParams();
+
+  const vq = qEl.value.trim();
+  if (vq) params.set('query', vq);
+
+  const vs = statusEl.value;
+  if (vs !== 'All') params.set('status', vs);
+
+  // Only send priority filter when not all three are selected
+  if (selected.length > 0 && selected.length < 3) {
+    params.set('priority', selected.join(','));
+  }
+
+  const sort = sortEl.value;
+  if (sort) params.set('sort', sort);
+
+  return params.toString();
+}
+
+async function load(){
+  const query = buildQuery();
+  const res = await fetch('/api/todos' + (query ? `?${query}` : ''));
+  const todos = await res.json();
+  list.innerHTML = '';
+  for (const t of todos) list.appendChild(renderRow(t));
+}
+
+function renderRow(t){
+  const li = document.createElement('li');
+  // checkbox
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.dataset.id = t.id;
+  li.appendChild(cb);
+
+  // main content
+  const main = document.createElement('div');
+  const title = document.createElement('span');
+  title.dataset.testid = 'todo-label';
+  title.textContent = (t.completed ? '✅ ' : '') + t.title;
+  main.appendChild(title);
+
+  const badge = document.createElement('span');
+  badge.className = `badge ${t.priority}`;
+  badge.textContent = t.priority;
+  main.appendChild(badge);
+
+  if (t.dueDate){
+    const due = new Date(t.dueDate);
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    const today = new Date(); today.setHours(0,0,0,0);
+    chip.textContent = due.toLocaleDateString();
+    if (due < today) chip.textContent += ' (Overdue)';
+    main.appendChild(chip);
+  }
+
+  if (t.tags && t.tags.length){
+    for (const tag of t.tags){
+      const tg = document.createElement('span');
+      tg.className = 'tag';
+      tg.textContent = `#${tag}`;
+      main.appendChild(tg);
+    }
+  }
+
+  li.appendChild(main);
+
+  // edit (quick prompt)
+  const editBtn = document.createElement('button');
+  editBtn.textContent = 'Edit';
+  editBtn.onclick = async () => {
+    const newTitle = prompt('Edit title', t.title);
+    if (!newTitle) return;
+    const res = await fetch(`/api/todos/${t.id}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ title: newTitle })
+    });
+    if (!res.ok) return alert(await res.text());
+    await load();
+  };
+  li.appendChild(editBtn);
+
+  // actions
+  const actions = document.createElement('div');
+  const complete = document.createElement('button');
+  complete.textContent = 'Complete';
+  complete.dataset.testid = 'complete-btn';
+  complete.onclick = async () => { await fetch(`/api/todos/${t.id}/complete`, {method:'PUT'}); await load(); };
+  actions.appendChild(complete);
+
+  const del = document.createElement('button');
+  del.textContent = 'Delete';
+  del.dataset.testid = 'delete-btn';
+  del.onclick = async () => { await fetch(`/api/todos/${t.id}`, {method:'DELETE'}); await load(); };
+  actions.appendChild(del);
+
+  li.appendChild(actions);
+  return li;
+}
+
+// create
+form.onsubmit = async (e) => {
+  e.preventDefault();
+  const title = titleEl.value.trim();
+  if (!title) return;
+  const dto = {
+    title,
+    priority: prioEl.value, // enum as string (server expects strings)
+    dueDate: dueEl.value ? new Date(dueEl.value).toISOString() : null,
+    tags: tagsEl.value ? tagsEl.value.split(',').map(s=>s.trim()).filter(Boolean) : [],
+    notes: notesEl.value || ''
+  };
+  const res = await fetch('/api/todos', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(dto)
+  });
+  if (!res.ok){ alert(await res.text()); return; }
+  titleEl.value = ''; tagsEl.value = ''; notesEl.value = ''; dueEl.value = '';
+  await load();
+};
+
+// filters
+applyBtn.onclick = (e)=>{ e.preventDefault(); load(); };
+clearBtn.onclick = (e)=>{ e.preventDefault();
+  qEl.value=''; statusEl.value='All'; qsa('.prio').forEach(p=>p.checked=true); sortEl.value='';
+  load();
+};
+
+// bulk
+async function bulk(op){
+  const ids = qsa('input[type="checkbox"][data-id]:checked').map(c=>c.dataset.id);
+  if (!ids.length) return;
+  const res = await fetch('/api/todos/bulk', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ op, ids })
+  });
+  if (!res.ok) return alert(await res.text());
+  await load();
+}
+bulkComplete.onclick = (e)=>{ e.preventDefault(); bulk('complete'); };
+bulkDelete.onclick = (e)=>{ e.preventDefault(); bulk('delete'); };
+
+// initial
+load();
+</script>
+</body>
+</html>
