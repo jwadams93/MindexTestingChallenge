@@ -217,7 +217,12 @@ public class AdvancedTodosSteps
 
     private void SetDate(string css, DateTime date)
     {
-        Driver.FindElement(By.CssSelector(css)).SendKeys(date.ToString("yyyy-MM-dd"));
+        var element = Driver.FindElement(By.CssSelector(css));
+        ((IJavaScriptExecutor) Driver).ExecuteScript(
+            "arguments[0].value = arguments[1];",
+            element,
+            date.ToString("yyyy-MM-dd"));
+        //Driver.FindElement(By.CssSelector(css)).SendKeys(date.ToString("yyyy-MM-dd"));
     }
 
     private IWebElement FindRow(string title)

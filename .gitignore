@@ -1,0 +1,15 @@
+# Build output
+bin/
+obj/
+
+# User-specific VS/Rider files
+*.user
+.vs/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+#gen files
+*.feature.cs
