@@ -194,6 +194,15 @@ public class AdvancedTodosSteps
         actual.Should().Equal(expected);
     }
 
+    [Then(@"I should see in the list:")]
+    public void ThenIShouldSeeInTheList(Table table)
+    {
+        var expected = table.Rows.Select(r => r.Values.First().Trim()).ToList();
+        var actual = Driver.FindElements(By.CssSelector("[data-testid='todo-label']"))
+                           .Select(SafeText).Select(t => t.Replace("✅ ", "")).ToList();
+        actual.Should().BeEquivalentTo(expected);
+    }
+
     [Then(@"I should see ""(.*)"" marked as overdue")]
     public void ThenIShouldSeeWithOverdue(string title)
     {

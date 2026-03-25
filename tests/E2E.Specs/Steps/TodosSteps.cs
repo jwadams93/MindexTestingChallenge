@@ -38,7 +38,10 @@ public class TodosSteps
     {
         var row = FindRow(title);
         row.FindElement(By.CssSelector("[data-testid='complete-btn']")).Click();
-        Wait.Until(_ => FindRow(title).FindElement(By.CssSelector("[data-testid='todo-label']")).Text.StartsWith("✅ "));
+        Wait.Until(_ => {
+                try { return FindRow(title).FindElement(By.CssSelector("[data-testid='todo-label']")).Text.StartsWith("✅ "); }
+                catch (StaleElementReferenceException) { return false; }
+            });
     }
 
     [Then(@"the todo ""(.*)"" should appear completed")]
@@ -54,7 +57,11 @@ public class TodosSteps
     {
         var row = FindRow(title);
         row.FindElement(By.CssSelector("[data-testid='delete-btn']")).Click();
-        Wait.Until(_ => !Driver.FindElements(By.CssSelector("[data-testid='todo-label']")).Any(e => e.Text.EndsWith(title)));
+        Wait.Until(_ => !Driver.FindElements(By.CssSelector("[data-testid='todo-label']"))
+            .Any(e => {
+                try { return e.Text.EndsWith(title); }
+                catch (StaleElementReferenceException) { return false; }
+            }));
     }
 
     [Then(@"I should not see ""(.*)"" in the list")]
@@ -70,7 +77,9 @@ public class TodosSteps
         Wait.Until(d => d.FindElements(By.CssSelector("#list li")).Any());
         foreach (var li in Driver.FindElements(By.CssSelector("#list li")))
         {
-            var label = li.FindElement(By.CssSelector("[data-testid='todo-label']")).Text ?? string.Empty;
+            string label;
+            try { label = li.FindElement(By.CssSelector("[data-testid='todo-label']")).Text ?? string.Empty; }
+            catch (StaleElementReferenceException) { continue; }
             if (label.EndsWith(title)) return li;
         }
         throw new Exception($"Row with title '{title}' not found");

@@ -46,6 +46,54 @@ Feature: Todos E2E
     Then I should see "Overdue task" with priority "High"
     And I should see "Overdue task" marked as overdue
 
+  Scenario: Search and Filter by priority: High and status: All
+    Given I seed todos:
+      | title        | priority | dueDate  |
+      | do taxes     | High     | +21d     |
+      | groceries    | Low      | +6d      |
+      | hire jake    | High     | -6d      |
+      | exercise     | Medium   | +4d      |
+      | chores       | Low      | +9d      |
+    And I open the Todos page
+    When I set filter Priority to "High" and Status to "All"
+    Then I should see in the list:
+      | title        |
+      | do taxes     |
+      | hire jake    |
+  
+  Scenario: Search and Filter by priority: High and status: Complete 
+    Given I seed todos:
+      | title        | priority | dueDate  |
+      | do taxes     | High     | +21d     |
+      | groceries    | Low      | +6d      |
+      | hire jake    | High     | -6d      |
+      | exercise     | Medium   | +4d      |
+      | chores       | Low      | +9d      |
+    And I open the Todos page
+    When I complete the todo "hire jake"
+    And I set filter Priority to "High" and Status to "Complete"
+    Then I should see in the list:
+      | title        |
+      | hire jake    |
+
+  Scenario: Search and Filter by priority: Low and status: Active 
+    Given I seed todos:
+      | title        | priority | dueDate  |
+      | do taxes     | Low      | +21d     |
+      | groceries    | Low      | +6d      |
+      | hire jake    | High     | -6d      |
+      | exercise     | Low      | +4d      |
+      | chores       | Low      | +9d      |
+    And I open the Todos page
+    When I complete the todo "do taxes"
+    And I complete the todo "groceries"
+    And I set filter Priority to "Low" and Status to "Active"
+    Then I should see in the list:
+      | title        |
+      | exercise     |
+      | chores       |
+      
+
   # Negative Scenarios
 
   Scenario: Edit title results in duplicate todos error
