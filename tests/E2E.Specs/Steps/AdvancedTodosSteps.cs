@@ -98,6 +98,18 @@ public class AdvancedTodosSteps
         WaitForRow(newTitle);
     }
 
+    // ---------- Edit (accept prompt;) ----------
+    [When(@"I edit ""(.*)"" to title ""(.*)""")]
+    public async Task WhenIEditToTitle(string oldTitle, string newTitle)
+    {
+        // click Edit then dismiss any prompt
+        var row = FindRow(oldTitle);
+        row.FindElement(By.XPath(".//button[normalize-space()='Edit']")).Click();
+        WaitForAlert();
+        SendKeysToAlert(newTitle);
+        AcceptAlert();
+    }
+
     // ---------- Search / Filters / Bulk ----------
     [When(@"I search for ""(.*)"" and select all items")]
     public void WhenISearchForAndSelectAllItems(string query)
@@ -182,6 +194,22 @@ public class AdvancedTodosSteps
         actual.Should().Equal(expected);
     }
 
+    [Then(@"I should see ""(.*)"" marked as overdue")]
+    public void ThenIShouldSeeWithOverdue(string title)
+    {
+        var row = FindRow(title);
+        var chip = row.FindElement(By.CssSelector(".chip"));
+        chip.Text.Should().ContainEquivalentOf("(Overdue)");
+    }
+
+    [Then(@"I should see an alert containing the error: ""(.*)""")]
+    public void ThenIShouldSeeAnAlertContainingError(string error)
+    {
+        var alert = Driver.SwitchTo().Alert();
+        alert.Text.Should().Contain(error);
+        alert.Dismiss();
+    }
+
     // ---------- Helpers ----------
     private string BaseUrl() => (string)(_ctx.TryGetValue("baseUrl", out var v) ? v! : "http://localhost:5173");
 
@@ -222,7 +250,6 @@ public class AdvancedTodosSteps
             "arguments[0].value = arguments[1];",
             element,
             date.ToString("yyyy-MM-dd"));
-        //Driver.FindElement(By.CssSelector(css)).SendKeys(date.ToString("yyyy-MM-dd"));
     }
 
     private IWebElement FindRow(string title)
@@ -242,9 +269,28 @@ public class AdvancedTodosSteps
                          .Any(e => SafeText(e).EndsWith(title)));
     }
 
+    private void WaitForAlert()
+    {
+        Wait.Until(driver =>
+        {
+            try { driver.SwitchTo().Alert(); return true; }
+            catch (NoAlertPresentException) { return false; }
+        });
+    }
+
+    private void SendKeysToAlert(string text)
+    {
+        Driver.SwitchTo().Alert().SendKeys(text);
+    }
+
+    private void AcceptAlert()
+    {
+        Driver.SwitchTo().Alert().Accept();
+    }
+
     private void TryDismissAlert()
     {
-        try { Driver.SwitchTo().Alert().Dismiss(); } catch { }
+        try { Driver.SwitchTo().Alert().Dismiss(); } catch {}
     }
 
     private static string SafeText(IWebElement el)

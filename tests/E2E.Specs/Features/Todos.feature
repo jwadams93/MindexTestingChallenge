@@ -26,6 +26,9 @@ Feature: Todos E2E
 
 # Suggested
 
+
+  # Positive Scenarios
+
   Scenario: Create a todo with priority and due date
     Given I open the Todos page
     When I create a todo titled "Schedule dentist" with:
@@ -34,3 +37,22 @@ Feature: Todos E2E
     Then I should see "Schedule dentist" in the list
     And I should see "Schedule dentist" with priority "High"
     And it should show a due date within 3 days
+
+  Scenario: Create an overdue todo
+    Given I seed todos:
+      | title        | priority | dueDate |
+      | Overdue task | High     | -3d     |
+    And I open the Todos page
+    Then I should see "Overdue task" with priority "High"
+    And I should see "Overdue task" marked as overdue
+
+  # Negative Scenarios
+
+  Scenario: Edit title results in duplicate todos error
+    Given I seed todos:
+      | title        | priority | tags    | dueDate  |
+      | update test 1| Low      | inTest  | +10d     |
+      | update test 2| Low      | inDev   | +10d     |
+    And I open the Todos page
+    When I edit "update test 2" to title "update test 1" 
+    Then I should see an alert containing the error: "Duplicate title"
