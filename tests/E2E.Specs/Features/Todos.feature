@@ -37,6 +37,7 @@ Feature: Todos E2E
     And I should see "Schedule dentist" with priority "High"
     And it should show a due date within 3 days
 
+
   Scenario: Create an overdue todo
     Given I seed todos:
       | title        | priority | dueDate |
@@ -44,6 +45,7 @@ Feature: Todos E2E
     And I open the Todos page
     Then I should see "Overdue task" with priority "High"
     And I should see "Overdue task" marked as overdue
+
 
   Scenario: Create a todo with a title at maximum length (100 chars)
     Given I open the unpopulated Todos page
@@ -76,6 +78,7 @@ Feature: Todos E2E
       | do taxes     |
       | hire jake    |
   
+
   Scenario: Filter by priority: High and status: Complete 
     Given I seed todos:
       | title        | priority | dueDate  |
@@ -90,6 +93,7 @@ Feature: Todos E2E
     Then I should see in the list:
       | title        |
       | hire jake    |
+
 
   Scenario: Filter by priority: Low and status: Active 
     Given I seed todos:
@@ -109,7 +113,9 @@ Feature: Todos E2E
       | chores       |
       | groceries    |
 
+
   # ── Sort ────────────────────────────────────────────
+
 
   Scenario: Sort by Title 
     Given I seed todos:
@@ -129,6 +135,7 @@ Feature: Todos E2E
       | skip breakfast     |
       | think about dinner |
       
+
   Scenario: Sort by Priority
     Given I seed todos:
       | title              | priority    | dueDate  |
@@ -146,6 +153,7 @@ Feature: Todos E2E
       | cook dinner        |
       | make lunch         |
       | think about dinner |
+
 
   Scenario: Sort by Due date 
     Given I seed todos:
@@ -165,6 +173,7 @@ Feature: Todos E2E
       | make lunch         |
       | cook dinner        |
 
+
   # ── Bulk Operations ────────────────────────────────────────────
 
   Scenario: Bulk Complete All 
@@ -178,6 +187,7 @@ Feature: Todos E2E
     And I apply bulk action "complete"
     Then both items should appear completed
 
+
   Scenario: Bulk Delete All
     Given I seed todos:
       | title              | priority    | dueDate  |
@@ -189,6 +199,8 @@ Feature: Todos E2E
     And I apply bulk action "delete"
     Then I should not see "cook dinner" in the list
     And I should not see "go to dinner" in the list
+    And I should see "skip breakfast" in the list
+
 
   Scenario: Bulk Complete Some
     Given I seed todos:
@@ -204,6 +216,7 @@ Feature: Todos E2E
     And I apply bulk action "complete"
     Then "cook dinner" should appear completed
     And "go to dinner" should appear completed
+
 
   Scenario: Bulk Delete Some
     Given I seed todos:
@@ -221,7 +234,9 @@ Feature: Todos E2E
       | title         |
       | skip breakfast|
 
+
   # ── Tags ────────────────────────────────────────────
+
 
   Scenario: Tags are displayed on a todo
     Given I open the unpopulated Todos page
@@ -270,8 +285,8 @@ Feature: Todos E2E
     Then I should see exactly 5 tags on "Many tags"
     And I should not see tag "six" on "Many tags"
 
-  # ── End Positive Scenarios ────────────────────────────────────────────
 
+  # ── End Positive Scenarios ────────────────────────────────────────────
 
 
   # ── Negative Scenarios ────────────────────────────────────────────
@@ -291,6 +306,7 @@ Feature: Todos E2E
 
 
   # ── Edit ────────────────────────────────────────────
+
 
   Scenario: Edit title results in duplicate todos error
     Given I seed todos:
