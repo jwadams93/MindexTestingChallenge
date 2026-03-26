@@ -33,10 +33,30 @@ public class TodosSteps
         labels.Any(x => x.EndsWith(title)).Should().BeTrue();
     }
 
+    [When(@"I try to add a todo titled ""(.*)""")]
+    public void WhenITryToAddATodoTitled(string title)
+    {
+        var t = Driver.FindElement(By.CssSelector("#title"));
+        t.Clear(); t.SendKeys(title);
+        Driver.FindElement(By.CssSelector("[data-testid='add-btn']")).Click();
+    }
+
+    [When(@"I try to add a todo with an empty title")]
+    public void WhenITryToAddATodoWithEmptyTitle()
+    {
+        Driver.FindElement(By.CssSelector("#title")).Clear();
+        Driver.FindElement(By.CssSelector("[data-testid='add-btn']")).Click();
+    }
+
+   [Then(@"the todo list should be empty")]
+    public void ThenTheTodoListShouldBeEmpty()
+    {
+        Driver.FindElements(By.CssSelector("[data-testid='todo-label']")).Should().BeEmpty();
+    }
+
     [When(@"I complete the todo ""(.*)""")]
     public void WhenICompleteTheTodo(string title)
     {
-
         Wait.Until(_ =>
         {
             try
@@ -52,9 +72,18 @@ public class TodosSteps
     [Then(@"the todo ""(.*)"" should appear completed")]
     public void ThenTheTodoShouldAppearCompleted(string title)
     {
-        var row = FindRow(title);
-        var text = row.FindElement(By.CssSelector("[data-testid='todo-label']")).Text;
-        text.StartsWith("✅ ").Should().BeTrue();
+        Wait.Until(_ =>
+        {
+            try
+            {
+                var row = FindRow(title);
+                var text = row.FindElement(By.CssSelector("[data-testid='todo-label']")).Text;
+                text.StartsWith("✅ ").Should().BeTrue();
+                return true;
+            }
+            catch (StaleElementReferenceException) { return false; }
+            catch (Exception e) when (e.Message.Contains("not found")) { return false; }
+        });
     }
 
     [When(@"I delete the todo ""(.*)""")]

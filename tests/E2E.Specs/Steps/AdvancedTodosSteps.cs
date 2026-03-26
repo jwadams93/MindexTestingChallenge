@@ -33,6 +33,12 @@ public class AdvancedTodosSteps
     {
         Driver.Navigate().GoToUrl(BaseUrl());
         Wait.Until(d => Exists(d, "[data-testid='new-title']"));
+        //Reset filters
+        ((IJavaScriptExecutor)Driver).ExecuteScript(
+            "document.getElementById('status').value='All';" +
+            "document.getElementById('sort').value='';" +
+            "document.querySelectorAll('.prio').forEach(cb=>cb.checked=true);"
+            );
         Wait.Until(d => d.FindElements(By.CssSelector("#list li")).Any());  
     }
 
@@ -110,7 +116,6 @@ public class AdvancedTodosSteps
     [When(@"I edit ""(.*)"" to title ""(.*)""")]
     public async Task WhenIEditToTitle(string oldTitle, string newTitle)
     {
-        // click Edit then dismiss any prompt
         var row = FindRow(oldTitle);
         row.FindElement(By.XPath(".//button[normalize-space()='Edit']")).Click();
         WaitForAlert();
@@ -125,8 +130,19 @@ public class AdvancedTodosSteps
         SetValue("#q", query);
         Click("#apply");
         Wait.Until(_ => Driver.FindElements(By.CssSelector("#list li")).Any());
-        foreach (var cb in Driver.FindElements(By.CssSelector("input[type='checkbox'][data-id]")))
-            if (!cb.Selected) cb.Click();
+        RetryOnStale(() =>
+        {
+            foreach (var cb in Driver.FindElements(By.CssSelector("input[type='checkbox'][data-id]")))
+                if (!cb.Selected) cb.Click();
+        });
+    }
+
+    [When(@"I search for ""(.*)""")]
+    public void WhenISearchFor(string query)
+    {
+        SetValue("#q", query);
+        Click("#apply");
+        Wait.Until(_ => Driver.FindElements(By.CssSelector("#list li")).Any());
     }
 
     [When(@"I select the following todos:")]
@@ -175,7 +191,7 @@ public class AdvancedTodosSteps
         else
         {
             Click("#bulk-delete");
-            Wait.Until(d => d.FindElements(By.CssSelector("#list-li")).Count < countBefore);
+            Wait.Until(d => d.FindElements(By.CssSelector("#list li")).Count < countBefore);
         }
     }
 
@@ -183,14 +199,11 @@ public class AdvancedTodosSteps
     [When(@"I sort by ""(.*)""")]
     public void WhenISortBy(string sortType)
     {
-        //Need to select "sort" and then check out how we handle the other drop down and see how I can best 
-        // select the sort type 
-        // It looks like Sort: Title has no value by which to select it?
         Select("#sort", sortType );
         Click("#apply");
-        Wait.Until(driver => driver.FindElements(By.CssSelector("#sort"))
-            .Any(el => SafeText(el).Contains(sortType)));
+        Wait.Until(driver => driver.FindElements(By.CssSelector("#list li")).Any());
     }
+
 
     // ---------- Assertions ----------
     [Then(@"both items should appear completed")]
@@ -251,6 +264,13 @@ public class AdvancedTodosSteps
         actual.Should().BeEquivalentTo(expected);
     }
 
+    [Then(@"I should see exactly (\d+) todos in the list")]
+    public void ThenIShouldSeeInTheList(int expectedNumberOfTodos)
+    {
+        var actualNumberOfTodos = Driver.FindElements(By.CssSelector("[data-testid='todo-label']")).Count();
+        actualNumberOfTodos.Should().Be(expectedNumberOfTodos);
+    }
+
     [Then(@"I should see ""(.*)"" marked as overdue")]
     public void ThenIShouldSeeWithOverdue(string title)
     {
@@ -265,6 +285,33 @@ public class AdvancedTodosSteps
         var alert = Driver.SwitchTo().Alert();
         alert.Text.Should().Contain(error);
         alert.Dismiss();
+    }
+
+    [Then(@"I should see the following tags on ""(.*)"":")]
+    public void ThenIShouldSeeTheFollowingTagsOn(string title, Table table)
+    {
+        var row = FindRow(title);
+        var actual = row.FindElements(By.CssSelector(".tag"))
+            .Select(el => el.Text.TrimStart('#').Trim()).ToList();
+        var expected = table.Rows.Select(r => r.Values.First().Trim()).ToList();
+        actual.Should().BeEquivalentTo(expected);
+    }
+
+    [Then(@"I should not see tag ""(.*)"" on ""(.*)""")]
+    public void ThenIShouldNotSeeTagOn(string tag, string title)
+    {
+        var row = FindRow(title);
+        var actual = row.FindElements(By.CssSelector(".tag"))
+            .Select(el => el.Text.TrimStart('#').Trim()).ToList();
+        actual.Should().NotContain(tag);
+    }
+
+    [Then(@"I should see exactly (\d+) tags on ""(.*)""")] 
+    public void ThenIShouldSeeExactlyTagsOn(int numberOfTags, string title)
+    {
+        var row = FindRow(title);
+        var actualNumberOfTags = row.FindElements(By.CssSelector(".tag")).Count();
+        actualNumberOfTags.Should().Be(numberOfTags);
     }
 
     // ---------- Helpers ----------
@@ -311,13 +358,19 @@ public class AdvancedTodosSteps
 
     private IWebElement FindRow(string title)
     {
-        Wait.Until(d => d.FindElements(By.CssSelector("#list li")).Any());
-        foreach (var li in Driver.FindElements(By.CssSelector("#list li")))
-        {
-            var label = SafeText(li.FindElement(By.CssSelector("[data-testid='todo-label']")));
-            if (label.EndsWith(title)) return li;
-        }
-        throw new Exception($"Row with title '{title}' not found");
+        IWebElement? found = null;
+        Wait.Until(_ => {
+            try
+            {
+                var items = Driver.FindElements(By.CssSelector("#list li"));
+                if (!items.Any()) return false;
+                found = items.FirstOrDefault(li =>
+                    SafeText(li.FindElement(By.CssSelector("[data-testid='todo-label']"))).EndsWith(title));
+                return found != null;
+            }
+            catch (StaleElementReferenceException) { return false; }
+        });
+        return found ?? throw new Exception($"Row with title '{title}' not found");
     }
 
     private void WaitForRow(string title)
@@ -368,6 +421,15 @@ public class AdvancedTodosSteps
             return unit.StartsWith("d") ? DateTime.Today.AddDays(sign * val) : DateTime.Today;
         }
         return DateTime.Parse(s);
+    }
+
+    private void RetryOnStale(Action action)
+    {
+        Wait.Until(_ =>
+        {
+            try { action(); return true; }
+            catch (StaleElementReferenceException) { return false; }
+        });
     }
 }
 

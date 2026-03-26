@@ -24,10 +24,7 @@ Feature: Todos E2E
 
 # ── My Scenarios ────────────────────────────────────────────
 
-# Suggested
-
-
-  # Positive Scenarios
+  # ── Positive Scenarios ────────────────────────────────────────────
 
   # ── Create ────────────────────────────────────────────
 
@@ -47,6 +44,20 @@ Feature: Todos E2E
     And I open the Todos page
     Then I should see "Overdue task" with priority "High"
     And I should see "Overdue task" marked as overdue
+
+  Scenario: Create a todo with a title at maximum length (100 chars)
+    Given I open the unpopulated Todos page
+    When I add a todo titled "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    Then I should see "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" in the list
+
+  # ── Edit ────────────────────────────────────────────
+
+  Scenario: Create and edit a todo
+    Given I open the unpopulated Todos page
+    When I add a todo titled "edit a todo"
+    Then I should see "edit a todo" in the list
+    When I edit "edit a todo" to title "edited a todo" 
+    Then I should see "edited a todo" in the list
 
   # ── Filter ────────────────────────────────────────────
 
@@ -98,9 +109,9 @@ Feature: Todos E2E
       | chores       |
       | groceries    |
 
-  # ── Search ────────────────────────────────────────────
+  # ── Sort ────────────────────────────────────────────
 
-  Scenario: Search All and sort by Title 
+  Scenario: Sort by Title 
     Given I seed todos:
       | title              | priority | dueDate  |
       | cook dinner        | Low      | +21d     |
@@ -110,15 +121,15 @@ Feature: Todos E2E
       | make lunch         | Low      | +9d      |
     And I open the Todos page
     When I sort by "Sort: Title"
-    And I set filter Priority to "Low" and Status to "Active" expecting "cook dinner"
     Then I should see exactly:
       | title              |
       | cook dinner        |
+      | go to dinner       |
       | make lunch         |
       | skip breakfast     |
       | think about dinner |
       
-  Scenario: Search All and sort by Priority
+  Scenario: Sort by Priority
     Given I seed todos:
       | title              | priority    | dueDate  |
       | cook dinner        | Low         | +21d     |
@@ -136,7 +147,7 @@ Feature: Todos E2E
       | make lunch         |
       | think about dinner |
 
-  Scenario: Search All and sort by Due date 
+  Scenario: Sort by Due date 
     Given I seed todos:
       | title              | priority    | dueDate  |
       | cook dinner        | Low         | +21d     |
@@ -210,9 +221,76 @@ Feature: Todos E2E
       | title         |
       | skip breakfast|
 
+  # ── Tags ────────────────────────────────────────────
+
+  Scenario: Tags are displayed on a todo
+    Given I open the unpopulated Todos page
+    When I create a todo titled "Grocery run" with:
+      | priority | tags              |
+      | Low      | food,errands,week |
+    Then I should see "Grocery run" in the list
+    And I should see the following tags on "Grocery run":
+      | tags    |
+      | food    | 
+      | errands |
+      | week    |
 
 
-  # Negative Scenarios
+  Scenario: Search returns todos matching a tag
+    Given I seed todos:
+      | title         | priority | tags          |
+      | Buy groceries | Low      | food,shopping |
+      | Pay bills     | High     | finance       |
+      | Cook dinner   | Medium   | food          |
+    And I open the Todos page
+    When I search for "food"
+    Then I should see in the list:
+      | title         |
+      | Buy groceries |
+      | Cook dinner   |
+
+
+  Scenario: Tags are sanitized on creation
+    Given I open the unpopulated Todos page
+    When I create a todo titled "Tag sanitize test" with:
+      | priority | tags                                  |
+      | Medium   | #health,my tag,toolong123456789012345 |
+    Then I should see the following tags on "Tag sanitize test":
+      | tags                 |
+      | health               |
+      | my-tag               |
+      | toolong1234567890123 |
+ 
+
+  Scenario: Only the first 5 tags are kept
+    Given I open the unpopulated Todos page
+    When I create a todo titled "Many tags" with:
+      | priority | tags                          |
+      | Low      | one,two,three,four,five,six   |
+    Then I should see exactly 5 tags on "Many tags"
+    And I should not see tag "six" on "Many tags"
+
+  # ── End Positive Scenarios ────────────────────────────────────────────
+
+
+
+  # ── Negative Scenarios ────────────────────────────────────────────
+
+  # ── Create ────────────────────────────────────────────
+
+  Scenario: Create a todo with no title
+    Given I open the unpopulated Todos page
+    When I try to add a todo with an empty title
+    Then the todo list should be empty
+
+
+  Scenario: Create a todo with a title over the maximum length
+    Given I open the unpopulated Todos page
+    When I try to add a todo titled "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    Then I should see an alert containing the error: "Title too long"
+
+
+  # ── Edit ────────────────────────────────────────────
 
   Scenario: Edit title results in duplicate todos error
     Given I seed todos:
