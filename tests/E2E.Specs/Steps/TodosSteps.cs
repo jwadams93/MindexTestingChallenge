@@ -36,12 +36,17 @@ public class TodosSteps
     [When(@"I complete the todo ""(.*)""")]
     public void WhenICompleteTheTodo(string title)
     {
-        var row = FindRow(title);
-        row.FindElement(By.CssSelector("[data-testid='complete-btn']")).Click();
-        Wait.Until(_ => {
-                try { return FindRow(title).FindElement(By.CssSelector("[data-testid='todo-label']")).Text.StartsWith("✅ "); }
-                catch (StaleElementReferenceException) { return false; }
-            });
+
+        Wait.Until(_ =>
+        {
+            try
+            {
+                FindRow(title).FindElement(By.CssSelector("[data-testid='complete-btn']")).Click(); 
+                return true;
+            }
+            catch (StaleElementReferenceException) { return false; }
+            catch (Exception e) when (e.Message.Contains("not found")) { return false; }
+        });
     }
 
     [Then(@"the todo ""(.*)"" should appear completed")]

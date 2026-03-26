@@ -21,11 +21,19 @@ public class AdvancedTodosSteps
     [Given(@"the app is running at ""(.*)""")]
     public void GivenTheAppIsRunningAt(string baseUrl) => _ctx["baseUrl"] = baseUrl.TrimEnd('/');
 
+    [Given(@"I open the unpopulated Todos page")]
+    public void GivenIOpenTheUnpopulatedTodosPage()
+    {
+        Driver.Navigate().GoToUrl(BaseUrl());
+        Wait.Until(d => Exists(d, "[data-testid='new-title']"));
+    }
+
     [Given(@"I open the Todos page")]
     public void GivenIOpenTheTodosPage()
     {
         Driver.Navigate().GoToUrl(BaseUrl());
         Wait.Until(d => Exists(d, "[data-testid='new-title']"));
+        Wait.Until(d => d.FindElements(By.CssSelector("#list li")).Any());  
     }
 
     // ---------- Dev seed/reset ----------
@@ -121,8 +129,24 @@ public class AdvancedTodosSteps
             if (!cb.Selected) cb.Click();
     }
 
-    [When(@"I set filter Priority to ""(.*)"" and Status to ""(.*)""")]
-    public void WhenISetFilterPriorityToAndStatusTo(string priosCsv, string status)
+    [When(@"I select the following todos:")]
+    public void WhenISelectTheTodos(Table table)
+    {
+        var titlesToSelect = table.Rows.Select(r => r.Values.First().Trim()).ToList();
+        Wait.Until(_ => Driver.FindElements(By.CssSelector("#list li")).Any());
+        foreach (var li in Driver.FindElements(By.CssSelector("#list li")))
+        {
+            var label = SafeText(li.FindElement(By.CssSelector("[data-testid='todo-label']")));
+            if (titlesToSelect.Contains(label.Trim()))
+            {
+                var cb = li.FindElement(By.CssSelector("input[type='checkbox'][data-id]"));
+                if (!cb.Selected) cb.Click();
+            }
+        }
+    }
+
+    [When(@"I set filter Priority to ""(.*)"" and Status to ""(.*)"" expecting ""(.*)""")]
+    public void WhenISetFilterPriorityToAndStatusTo(string priosCsv, string status, string expectedTitle)
     {
         foreach (var cb in Driver.FindElements(By.CssSelector(".prio")))
             if (cb.Selected) cb.Click();
@@ -134,14 +158,38 @@ public class AdvancedTodosSteps
 
         Select("#status", status);
         Click("#apply");
-        Wait.Until(_ => true);
+        Wait.Until(driver => driver.FindElements(By.CssSelector("[data-testid='todo-label']"))
+            .Any(el => SafeText(el).Contains(expectedTitle)));
     }
 
     [When(@"I apply bulk action ""(.*)""")]
     public void WhenIApplyBulkAction(string op)
     {
-        Click(op.Equals("complete", StringComparison.OrdinalIgnoreCase) ? "#bulk-complete" : "#bulk-delete");
-        Wait.Until(_ => true);
+        var countBefore = Driver.FindElements(By.CssSelector("#list li")).Count;
+        if (op.Equals("complete", StringComparison.OrdinalIgnoreCase))
+        {
+            Click("#bulk-complete");
+            Wait.Until(d => d.FindElements(By.CssSelector("[data-testid='todo-label']"))
+                .Any(e => SafeText(e).StartsWith("✅ ")));
+        } 
+        else
+        {
+            Click("#bulk-delete");
+            Wait.Until(d => d.FindElements(By.CssSelector("#list-li")).Count < countBefore);
+        }
+    }
+
+    // ---------- Sort ----------
+    [When(@"I sort by ""(.*)""")]
+    public void WhenISortBy(string sortType)
+    {
+        //Need to select "sort" and then check out how we handle the other drop down and see how I can best 
+        // select the sort type 
+        // It looks like Sort: Title has no value by which to select it?
+        Select("#sort", sortType );
+        Click("#apply");
+        Wait.Until(driver => driver.FindElements(By.CssSelector("#sort"))
+            .Any(el => SafeText(el).Contains(sortType)));
     }
 
     // ---------- Assertions ----------
