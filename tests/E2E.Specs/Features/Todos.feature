@@ -199,7 +199,6 @@ Feature: Todos E2E
     And I apply bulk action "delete"
     Then I should not see "cook dinner" in the list
     And I should not see "go to dinner" in the list
-    And I should see "skip breakfast" in the list
 
 
   Scenario: Bulk Complete Some

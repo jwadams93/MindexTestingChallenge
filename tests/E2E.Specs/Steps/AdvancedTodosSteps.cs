@@ -250,9 +250,14 @@ public class AdvancedTodosSteps
     public void ThenIShouldSeeExactly(Table table)
     {
         var expected = table.Rows.Select(r => r.Values.First().Trim()).ToList();
-        var actual = Driver.FindElements(By.CssSelector("[data-testid='todo-label']"))
-                           .Select(SafeText).Select(t => t.Replace("✅ ", "")).ToList();
-        actual.Should().Equal(expected);
+        List<string>? actual = null;
+        Wait.Until(_ =>
+        {
+            actual = Driver.FindElements(By.CssSelector("[data-testid='todo-label']"))
+                        .Select(SafeText).Select(t => t.Replace("✅ ", "")).ToList();
+            return actual.Count == expected.Count && actual.All(s => s.Length > 0);
+        });
+        actual!.Should().Equal(expected);
     }
 
     [Then(@"I should see in the list:")]
